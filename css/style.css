@@ -94,6 +94,19 @@ button { font: inherit; cursor: pointer; }
 .balance p { margin: 0; }
 .balance .tip { margin-top: 6px; font-size: 14px; color: var(--muted); }
 
+.notice { background: #fff6e0; color: #7a5a12; border-radius: 12px; padding: 10px 12px; font-size: 13px; margin: 0 0 16px; }
+.mbti-type { text-align: center; margin: 4px 0 6px; }
+.mbti-code { display: block; font-size: 40px; font-weight: 800; letter-spacing: 4px; color: var(--accent); }
+.mbti-nick { font-weight: 700; }
+.mbti-axes { margin: 16px 0 8px; }
+.axis { margin-bottom: 12px; }
+.axis-row { display: grid; grid-template-columns: 52px 1fr 52px; align-items: center; gap: 8px; font-size: 13px; }
+.axis-row span:last-child { text-align: right; }
+.axis-row .on { font-weight: 700; color: var(--accent); }
+.axis-track { position: relative; height: 10px; background: #e9e4f7; border-radius: 5px; overflow: hidden; }
+.axis-fill { position: absolute; top: 0; bottom: 0; background: var(--accent); }
+.axis-reason { margin: 2px 0 0; font-size: 13px; color: var(--muted); text-align: center; }
+
 .tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px; }
 .tab { flex: 0 0 auto; padding: 8px 14px; border: 1px solid var(--line); background: #fff; border-radius: 999px; color: var(--muted); }
 .tab[aria-selected=true] { background: var(--text); color: #fff; border-color: var(--text); font-weight: 600; }

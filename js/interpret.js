@@ -134,6 +134,116 @@
     };
   }
 
+  // ---------- 재미로 보는 예상 MBTI ----------
+  // 오행의 성향을 MBTI 네 축에 대응시킨 놀이용 추정. 실제 MBTI와 무관하다.
+
+  // E/I는 음양 비율, 나머지 세 축은 오행마다 서로 다른 조합이 걸리도록 배치
+  // (흙 S·J, 쇠 S·T, 물 N·T·P, 나무 N·F·J, 불 F·P)
+  var MBTI_AXES = [
+    { left: 'E', right: 'I', name: '에너지 방향', yinyang: true, leftLabel: '외향', rightLabel: '내향' },
+    { left: 'S', right: 'N', name: '인식 방식',
+      left_w: { earth: 1, metal: 0.75 }, right_w: { water: 1, wood: 0.75 },
+      leftLabel: '감각', rightLabel: '직관' },
+    { left: 'T', right: 'F', name: '판단 기준',
+      left_w: { metal: 1, water: 0.75 }, right_w: { fire: 1, wood: 0.75 },
+      leftLabel: '사고', rightLabel: '감정' },
+    { left: 'J', right: 'P', name: '생활 양식',
+      left_w: { earth: 1, wood: 0.75 }, right_w: { fire: 1, water: 0.75 },
+      leftLabel: '계획', rightLabel: '즉흥' }
+  ];
+
+  var YANG = '甲丙戊庚壬子寅辰午申戌';
+
+  // 동점일 때 일간별 기본 성향
+  var MBTI_DEFAULT = { wood: 'ENFJ', fire: 'ESFP', earth: 'ISFJ', metal: 'ESTJ', water: 'INTP' };
+
+  var MBTI_REASON = {
+    E: { yang: '밖으로 뻗어 나가는 양의 기운이 많아서' },
+    I: { yin: '안으로 차분히 모이는 음의 기운이 많아서' },
+    S: { earth: '흙 기운이 눈앞의 현실을 중시해서', metal: '쇠 기운이 구체적인 사실을 따져서' },
+    N: { water: '물 기운이 보이지 않는 흐름을 읽고', wood: '나무 기운이 앞날의 가능성을 그려서' },
+    T: { metal: '쇠 기운이 옳고 그름을 칼같이 갈라서', water: '물 기운이 차분하게 분석해서' },
+    F: { fire: '불 기운이 감정을 솔직하게 드러내서', wood: '나무 기운이 사람을 아껴서' },
+    J: { earth: '흙 기운이 안정과 질서를 좋아해서', wood: '나무 기운이 목표를 세워 차근차근 자라서' },
+    P: { fire: '불 기운이 그때그때 마음 가는 대로 움직여서', water: '물 기운이 상황에 맞춰 흘러가서' }
+  };
+
+  var MBTI_TYPES = {
+    ISTJ: ['원칙을 지키는 관리자', '책임감이 강하고 맡은 일을 끝까지 해내는 믿음직한 타입'],
+    ISFJ: ['다정한 수호자', '조용히 주변을 챙기고 한번 맺은 인연을 오래 지키는 타입'],
+    INFJ: ['통찰력 있는 조언자', '사람의 속마음을 잘 읽고 깊이 있는 관계를 원하는 타입'],
+    INTJ: ['큰 그림을 그리는 전략가', '멀리 내다보고 계획을 세워 혼자서도 묵묵히 실행하는 타입'],
+    ISTP: ['손재주 좋은 해결사', '말보다 행동, 문제가 생기면 침착하게 고쳐 내는 타입'],
+    ISFP: ['따뜻한 예술가', '자기만의 감성과 취향이 뚜렷하고 다정한 타입'],
+    INFP: ['이상을 꿈꾸는 중재자', '마음이 여리고 자신만의 가치를 소중히 여기는 타입'],
+    INTP: ['호기심 많은 분석가', '궁금한 건 끝까지 파고들고 독창적인 생각을 즐기는 타입'],
+    ESTP: ['행동파 모험가', '일단 부딪혀 보고 순발력으로 기회를 잡는 타입'],
+    ESFP: ['분위기 메이커', '어디서든 사람들을 즐겁게 하고 지금 이 순간을 즐기는 타입'],
+    ENFP: ['열정적인 아이디어 뱅크', '새로운 일에 금방 빠져들고 사람을 좋아하는 타입'],
+    ENTP: ['재치 있는 발명가', '말솜씨가 좋고 기존 방식을 뒤집는 아이디어가 넘치는 타입'],
+    ESTJ: ['추진력 있는 리더', '목표를 정하면 체계적으로 사람과 일을 이끄는 타입'],
+    ESFJ: ['사교적인 살림꾼', '사람들 사이를 챙기고 모임의 분위기를 따뜻하게 만드는 타입'],
+    ENFJ: ['사람을 이끄는 멘토', '다른 사람의 성장을 돕고 함께 나아가길 좋아하는 타입'],
+    ENTJ: ['대담한 지휘관', '도전적인 목표를 세우고 결단력 있게 밀어붙이는 타입']
+  };
+
+  function mbti(chart) {
+    // 일간(나 자신)의 오행은 1.5개만큼 더 반영
+    var w = {};
+    CYCLE.forEach(function (e) { w[e] = chart.elements[e] + (e === chart.dayMaster ? 1.5 : 0); });
+    var fallback = MBTI_DEFAULT[chart.dayMaster];
+
+    var axes = MBTI_AXES.map(function (a, i) {
+      function sum(weights) {
+        var s = 0, top = null, topV = 0;
+        Object.keys(weights).forEach(function (e) {
+          var v = w[e] * weights[e];
+          s += v;
+          if (v > topV) { topV = v; top = e; }
+        });
+        return { s: s, top: top };
+      }
+      var L, R;
+      if (a.yinyang) {
+        var yang = 0, yin = 0;
+        chart.chars.forEach(function (c) {
+          var v = c.pillar === 'day' && c.pos === 'stem' ? 2.5 : 1;
+          if (YANG.indexOf(c.ch) >= 0) yang += v; else yin += v;
+        });
+        L = { s: yang, top: 'yang' };
+        R = { s: yin, top: 'yin' };
+      } else {
+        L = sum(a.left_w);
+        R = sum(a.right_w);
+      }
+      var total = L.s + R.s;
+      var leftPct = total ? Math.round(L.s / total * 100) : 50;
+      var pick = leftPct > 50 ? a.left : leftPct < 50 ? a.right : fallback[i];
+      var src = pick === a.left ? L.top : R.top;
+      return {
+        name: a.name, left: a.left, right: a.right, leftLabel: a.leftLabel, rightLabel: a.rightLabel,
+        leftPct: leftPct, pick: pick,
+        reason: src ? MBTI_REASON[pick][src] : '기운이 팽팽해 타고난 기본 성향을 따라서'
+      };
+    });
+
+    var type = axes.map(function (a) { return a.pick; }).join('');
+    // 두 번째 후보: 가장 팽팽한 축을 뒤집은 유형
+    var closest = 0;
+    axes.forEach(function (a, i) { if (Math.abs(a.leftPct - 50) < Math.abs(axes[closest].leftPct - 50)) closest = i; });
+    var alt = type.split('');
+    alt[closest] = axes[closest].pick === axes[closest].left ? axes[closest].right : axes[closest].left;
+    alt = alt.join('');
+
+    return {
+      type: type,
+      nickname: MBTI_TYPES[type][0],
+      description: MBTI_TYPES[type][1],
+      axes: axes,
+      alt: { type: alt, nickname: MBTI_TYPES[alt][0] }
+    };
+  }
+
   // ---------- 연도별 운세 ----------
   // 각 운세는 판단 근거(notes)를 코드로 모은 뒤, 시제(now/past)에 맞는 문장으로 조립한다.
 
@@ -380,5 +490,5 @@
     return res;
   }
 
-  return { EL: EL, CYCLE: CYCLE, personality: personality, yearly: yearly, past: past, pastSummary: pastSummary, strength: strength };
+  return { EL: EL, CYCLE: CYCLE, personality: personality, mbti: mbti, yearly: yearly, past: past, pastSummary: pastSummary, strength: strength };
 });

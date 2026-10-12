@@ -124,6 +124,7 @@
       solar: solar,
       chart: chart,
       personality: Interpret.personality(chart),
+      mbti: Interpret.mbti(chart),
       yearly: Interpret.yearly(chart, thisYear, YEARS, v.gender),
       past: past,
       pastSummary: Interpret.pastSummary(past)
@@ -200,6 +201,8 @@
       bal.appendChild(b);
     });
 
+    renderMbti(r.mbti);
+
     var tabs = $('yearTabs'); tabs.innerHTML = '';
     r.yearly.forEach(function (y, i) {
       var t = el('button', 'tab', y.year + '년');
@@ -233,6 +236,31 @@
     AREAS.forEach(function (a) { body.appendChild(fortuneBox(a[1] + ' ' + a[2], y[a[0]])); });
     var note = el('p', 'hint', '건강운은 생활 습관 참고용이며 의학적 조언이 아닙니다.');
     body.appendChild(note);
+  }
+
+  function renderMbti(m) {
+    $('mType').textContent = m.type;
+    $('mNick').textContent = m.nickname;
+    $('mDesc').textContent = m.description;
+    var wrap = $('mAxes'); wrap.innerHTML = '';
+    m.axes.forEach(function (a) {
+      var leftOn = a.pick === a.left;
+      var box = el('div', 'axis');
+      var row = el('div', 'axis-row');
+      row.appendChild(el('span', leftOn ? 'on' : '', a.left + ' ' + a.leftPct + '%'));
+      var track = el('div', 'axis-track'), fill = el('div', 'axis-fill');
+      // 우세한 쪽에서 채워지도록
+      if (leftOn) { fill.style.left = '0'; fill.style.width = a.leftPct + '%'; }
+      else { fill.style.right = '0'; fill.style.width = (100 - a.leftPct) + '%'; }
+      track.setAttribute('aria-label', a.name + ': ' + a.leftLabel + ' ' + a.leftPct + '%, ' + a.rightLabel + ' ' + (100 - a.leftPct) + '%');
+      track.appendChild(fill);
+      row.appendChild(track);
+      row.appendChild(el('span', leftOn ? '' : 'on', (100 - a.leftPct) + '% ' + a.right));
+      box.appendChild(row);
+      box.appendChild(el('p', 'axis-reason', a.reason + ' ' + (leftOn ? a.leftLabel : a.rightLabel) + '(' + a.pick + ') 쪽이에요'));
+      wrap.appendChild(box);
+    });
+    $('mAlt').textContent = '아깝게 비켜 간 후보: ' + m.alt.type + ' · ' + m.alt.nickname;
   }
 
   function fortuneBox(label, f) {
