@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>오행 사주 · 나의 기운과 연도별 운세</title>
+  <meta name="description" content="생년월일시로 나의 오행을 보고, 성격과 연도별 재물·건강·연애운을 확인하세요.">
+  <meta property="og:title" content="오행 사주 · 나의 기운과 연도별 운세">
+  <meta property="og:description" content="나무·불·흙·쇠·물, 나는 어떤 기운으로 태어났을까?">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="wrap">
+    <header class="hero">
+      <div class="hero-dots" aria-hidden="true">
+        <span class="dot wood"></span><span class="dot fire"></span><span class="dot earth"></span><span class="dot metal"></span><span class="dot water"></span>
+      </div>
+      <h1>오행 사주</h1>
+      <p>나는 어떤 기운으로 태어났을까?<br>오행으로 보는 성격과 연도별 재물·건강·연애운</p>
+    </header>
+
+    <form id="form" class="card" autocomplete="off">
+      <div class="field">
+        <label for="name">이름 <span class="muted">(선택)</span></label>
+        <input id="name" type="text" maxlength="20" placeholder="결과 화면에만 표시돼요">
+      </div>
+
+      <div class="field">
+        <span class="label">성별</span>
+        <div class="seg" role="radiogroup">
+          <label><input type="radio" name="gender" value="female" checked><span>여성</span></label>
+          <label><input type="radio" name="gender" value="male"><span>남성</span></label>
+          <label><input type="radio" name="gender" value=""><span>선택 안 함</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="label">생년월일</span>
+        <div class="seg small" role="radiogroup">
+          <label><input type="radio" name="cal" value="solar" checked><span>양력</span></label>
+          <label><input type="radio" name="cal" value="lunar"><span>음력</span></label>
+        </div>
+        <div class="row3">
+          <select id="year" aria-label="년"></select>
+          <select id="month" aria-label="월"></select>
+          <select id="day" aria-label="일"></select>
+        </div>
+        <label class="check" id="leapWrap" hidden><input type="checkbox" id="leap"> 윤달</label>
+      </div>
+
+      <div class="field">
+        <span class="label">태어난 시간</span>
+        <div class="row2">
+          <input id="time" type="time" value="12:00" aria-label="태어난 시간">
+          <label class="check"><input type="checkbox" id="timeUnknown"> 모름</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="city">태어난 곳</label>
+        <select id="city"></select>
+        <p class="hint">태어난 곳의 경도에 맞춰 실제 태양 시각(진태양시)으로 보정해요.</p>
+      </div>
+
+      <p class="error" id="error" hidden></p>
+      <button type="submit" class="primary">내 오행 보기</button>
+      <p class="hint center">입력한 정보는 서버로 전송되지 않고 내 기기에서만 계산돼요.</p>
+    </form>
+
+    <section id="result" hidden>
+      <div class="card">
+        <p class="eyebrow" id="rName"></p>
+        <h2 id="rImage"></h2>
+        <p id="rTagline" class="muted"></p>
+        <div id="bars" class="bars"></div>
+        <details class="calc">
+          <summary>계산 근거 보기</summary>
+          <ul id="rCalc"></ul>
+        </details>
+      </div>
+
+      <div class="card">
+        <h3>성격 분석</h3>
+        <div id="keywords" class="chips"></div>
+        <p id="pSummary"></p>
+        <dl class="traits">
+          <dt>강점</dt><dd id="pStrengths"></dd>
+          <dt>약점</dt><dd id="pWeaknesses"></dd>
+          <dt>잘 맞는 환경</dt><dd id="pEnv"></dd>
+        </dl>
+        <div id="pBalance"></div>
+      </div>
+
+      <div class="card">
+        <h3>연도별 운세</h3>
+        <div id="yearTabs" class="tabs" role="tablist"></div>
+        <div id="yearBody"></div>
+        <p class="hint">한 해는 입춘(2월 4일 무렵)을 기준으로 바뀌어요.</p>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="share" class="primary">결과 공유하기</button>
+        <button type="button" id="again" class="ghost">다시 보기</button>
+      </div>
+      <p class="toast" id="toast" hidden></p>
+    </section>
+
+    <footer>
+      <p>본 서비스의 결과는 재미와 참고를 위한 것이며 의료·법률·투자 판단의 근거가 될 수 없습니다.</p>
+      <p>음력 변환은 중국 기준 음력 데이터를 사용해 일부 날짜에서 한국 음력과 하루 차이가 날 수 있습니다.</p>
+    </footer>
+  </main>
+
+  <script src="vendor/lunar.js"></script>
+  <script src="js/saju.js"></script>
+  <script src="js/interpret.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
