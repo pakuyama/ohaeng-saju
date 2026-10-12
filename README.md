@@ -36,6 +36,10 @@ js/app.js           입력·렌더링·공유
 vendor/lunar.js     lunar-javascript 1.7.7 (MIT, 6tail)
 ```
 
+## 배포 시 주의
+
+GitHub Pages는 CSS/JS를 10분간 캐시합니다. 파일을 수정해 배포할 때는 `index.html`의 `?v=` 숫자를 올려야 새 HTML과 이전 JS가 섞이지 않습니다.
+
 ## 로컬 실행
 
 ```
