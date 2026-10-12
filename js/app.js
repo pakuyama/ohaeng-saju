@@ -2,6 +2,9 @@
   var EL = Interpret.EL;
   var CYCLE = Interpret.CYCLE;
   var YEARS = 5;
+  var PAST_YEARS = 10;
+  var PAST_MIN_AGE = 10;
+  var AREAS = [['wealth', '💰', '재물운'], ['health', '💪', '건강운'], ['love', '❤️', '연애운']];
 
   var CITIES = [
     ['서울', 126.98], ['부산', 129.08], ['대구', 128.60], ['인천', 126.70], ['광주', 126.85],
@@ -115,11 +118,15 @@
       hour: v.hour, minute: v.minute, timeKnown: v.timeKnown,
       longitude: CITIES[v.city][1]
     });
+    var thisYear = new Date().getFullYear();
+    var past = Interpret.past(chart, thisYear, PAST_YEARS, v.gender, solar.year, PAST_MIN_AGE);
     return {
       solar: solar,
       chart: chart,
       personality: Interpret.personality(chart),
-      yearly: Interpret.yearly(chart, new Date().getFullYear(), YEARS, v.gender)
+      yearly: Interpret.yearly(chart, thisYear, YEARS, v.gender),
+      past: past,
+      pastSummary: Interpret.pastSummary(past)
     };
   }
 
@@ -202,6 +209,7 @@
       tabs.appendChild(t);
     });
     selectYear(r.yearly, 0);
+    renderPast(r.past, r.pastSummary);
 
     $('result').hidden = false;
     form.hidden = true;
@@ -222,17 +230,60 @@
       chips.appendChild(ch);
     });
     body.appendChild(chips);
-    [['💰 재물운', y.wealth], ['💪 건강운', y.health], ['❤️ 연애운', y.love]].forEach(function (f) {
-      var box = el('div', 'fortune');
-      var h = el('div', 'fortune-head');
-      h.appendChild(el('span', null, f[0]));
-      h.appendChild(stars(f[1].score));
-      box.appendChild(h);
-      box.appendChild(el('p', null, f[1].text));
-      body.appendChild(box);
-    });
+    AREAS.forEach(function (a) { body.appendChild(fortuneBox(a[1] + ' ' + a[2], y[a[0]])); });
     var note = el('p', 'hint', '건강운은 생활 습관 참고용이며 의학적 조언이 아닙니다.');
     body.appendChild(note);
+  }
+
+  function fortuneBox(label, f) {
+    var box = el('div', 'fortune');
+    var h = el('div', 'fortune-head');
+    h.appendChild(el('span', null, label));
+    h.appendChild(stars(f.score));
+    box.appendChild(h);
+    box.appendChild(el('p', null, f.text));
+    return box;
+  }
+
+  function renderPast(list, summary) {
+    $('pastCard').hidden = !list.length;
+    if (!list.length) return;
+
+    var sum = $('pastSummary'); sum.innerHTML = '';
+    AREAS.forEach(function (a) {
+      var s = summary[a[0]];
+      var box = el('div', 'ps');
+      box.appendChild(el('strong', null, a[1] + ' ' + a[2].replace('운', '')));
+      box.appendChild(el('div', 'up', s.best ? '▲ 최고 ' + s.best + '년' : '▲ 큰 상승 없음'));
+      box.appendChild(el('div', 'down', s.worst ? '▼ 고비 ' + s.worst + '년' : '▼ 큰 고비 없음'));
+      sum.appendChild(box);
+    });
+
+    var wrap = $('pastList'); wrap.innerHTML = '';
+    list.forEach(function (y) {
+      var item = el('details', 'past-item');
+      var s = el('summary');
+      var top = el('div', 'past-top');
+      var left = el('div');
+      left.appendChild(el('strong', null, y.year + '년 '));
+      left.appendChild(el('span', 'muted', '만 ' + y.age + '세 · ' + y.title));
+      top.appendChild(left);
+      var mini = el('span', 'mini');
+      AREAS.forEach(function (a) {
+        mini.appendChild(document.createTextNode(a[1]));
+        mini.appendChild(el('b', null, String(y[a[0]].score)));
+        mini.appendChild(document.createTextNode(' '));
+      });
+      top.appendChild(mini);
+      s.appendChild(top);
+      s.appendChild(el('p', 'past-line' + (y.highlight.good > 0 ? ' good' : y.highlight.good < 0 ? ' bad' : ''), y.highlight.text));
+      item.appendChild(s);
+
+      var body = el('div', 'past-body');
+      AREAS.forEach(function (a) { body.appendChild(fortuneBox(a[1] + ' ' + a[2], y[a[0]])); });
+      item.appendChild(body);
+      wrap.appendChild(item);
+    });
   }
 
   function showError(msg) {

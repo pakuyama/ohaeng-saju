@@ -135,6 +135,7 @@
   }
 
   // ---------- 연도별 운세 ----------
+  // 각 운세는 판단 근거(notes)를 코드로 모은 뒤, 시제(now/past)에 맞는 문장으로 조립한다.
 
   var COMBINE = ['子丑', '寅亥', '卯戌', '辰酉', '巳申', '午未'];
   var CLASH = ['子午', '丑未', '寅申', '卯酉', '辰戌', '巳亥'];
@@ -142,81 +143,119 @@
 
   function clamp(x) { return Math.max(1, Math.min(5, Math.round(x))); }
 
+  var WEALTH_TEXT = {
+    'wealth+': {
+      now: '돈의 기운이 직접 들어오는 해입니다. 그동안 준비한 일이 수입으로 이어지기 좋습니다.',
+      past: '돈의 기운이 직접 들어온 해였어요. 수입이 늘거나 준비하던 일이 돈으로 이어졌을 수 있어요.'
+    },
+    'wealth-': {
+      now: '돈이 들어올 기회는 보이지만 감당해야 할 일도 함께 커집니다. 욕심보다 실속을 챙기세요.',
+      past: '돈이 오갈 기회는 많았지만 그만큼 부담도 컸던 해예요. 벌어도 남는 게 적다고 느꼈을 수 있어요.'
+    },
+    'output+': {
+      now: '재능과 아이디어가 돈이 되는 흐름입니다. 부업이나 새 프로젝트를 시작해 보기 좋습니다.',
+      past: '재능과 아이디어가 빛을 본 해였어요. 새 일이나 부업을 시작했다면 성과가 있었을 거예요.'
+    },
+    'output-': {
+      now: '일은 많은데 손에 남는 것이 적을 수 있습니다. 체력과 시간을 아끼며 선택과 집중을 하세요.',
+      past: '바쁘게 움직였지만 손에 남는 것은 적었을 수 있어요.'
+    },
+    'peer+': {
+      now: '경쟁자가 많아지고 나가는 돈이 늘 수 있습니다. 보증, 동업, 큰 투자는 신중하게 결정하세요.',
+      past: '예상치 못한 지출이나 경쟁으로 돈이 새어 나갔을 수 있어요. 돈을 빌려주거나 함께 투자한 일로 신경 쓸 일이 있었을지도 몰라요.'
+    },
+    'peer-': {
+      now: '주변 사람의 도움으로 기회가 생깁니다. 함께하는 일에서 수익이 나기 쉽습니다.',
+      past: '주변 사람 덕분에 기회를 얻었던 해예요. 누군가와 함께한 일이 도움이 됐을 거예요.'
+    },
+    'resource+': {
+      now: '돈보다 공부와 준비에 마음이 가는 해입니다. 지출을 줄이고 자기계발에 투자하면 다음 해에 결실을 봅니다.',
+      past: '돈보다 공부, 자격증, 이직 준비처럼 미래를 위한 일에 마음이 갔던 해예요.'
+    },
+    'resource-': {
+      now: '든든한 지원군이 생기는 해입니다. 자격증, 문서, 계약과 관련된 일에서 이득을 볼 수 있습니다.',
+      past: '든든한 지원을 받았던 해예요. 계약, 문서, 시험과 관련해 좋은 결과가 있었을 수 있어요.'
+    },
+    'officer+': {
+      now: '책임과 자리가 커지면서 수입도 안정됩니다. 직장 안에서 인정받기 좋은 해입니다.',
+      past: '책임이 커지면서 인정받았던 해예요. 승진, 취업, 자리 이동 같은 변화가 있었을 수 있어요.'
+    },
+    'officer-': {
+      now: '일의 압박이 커질 수 있습니다. 무리한 확장보다 지금 가진 것을 지키는 데 집중하세요.',
+      past: '일과 책임의 압박이 컸던 해예요. 돈보다 버티는 것이 더 중요했다고 느꼈을 수 있어요.'
+    }
+  };
+  var WEALTH_TAIL = {
+    now: ['올해는 돈을 불리기보다 지키는 것이 우선입니다.', '큰돈이 오가는 결정은 한 번 더 점검하세요.', '지출 관리를 꼼꼼히 하면 무난히 지나갑니다.', '흐름이 좋으니 계획한 일을 적극적으로 추진해 보세요.', '재물 흐름이 아주 좋은 해입니다. 들어온 돈을 잘 모아 두세요.'],
+    past: ['재물 면에서는 지키기 바빴던 해예요.', '돈 문제로 고민한 순간이 있었을 거예요.', '재물은 큰 굴곡 없이 지나간 해예요.', '재물 흐름이 좋은 편이었어요.', '돌아보면 재물운이 손꼽히게 좋았던 해예요.']
+  };
+
   function wealthFortune(chart, yr, strong) {
-    var score = 3, notes = {};
+    var score = 3, seen = {}, notes = [];
     [yr.stemElement, yr.branchElement].forEach(function (e) {
       var r = relation(chart.dayMaster, e);
-      notes[r] = true;
       if (r === 'wealth') score += strong ? 1 : 0.25;
       else if (r === 'output') score += strong ? 0.5 : -0.25;
       else if (r === 'peer') score += strong ? -1 : 0.5;
       else if (r === 'resource') score += strong ? -0.5 : 0.25;
       else if (r === 'officer') score += strong ? 0.25 : -0.5;
+      if (!seen[r]) { seen[r] = true; notes.push(r + (strong ? '+' : '-')); }
     });
     var wealthEl = elementOf(chart.dayMaster, 'wealth');
-    if (notes.wealth && chart.elements[wealthEl] === 0) score += 0.5;
-    score = clamp(score);
-
-    var t = [];
-    if (notes.wealth) t.push(strong
-      ? '돈의 기운이 직접 들어오는 해입니다. 그동안 준비한 일이 수입으로 이어지기 좋습니다.'
-      : '돈이 들어올 기회는 보이지만 감당해야 할 일도 함께 커집니다. 욕심보다 실속을 챙기세요.');
-    if (notes.output) t.push(strong
-      ? '재능과 아이디어가 돈이 되는 흐름입니다. 부업이나 새 프로젝트를 시작해 보기 좋습니다.'
-      : '일은 많은데 손에 남는 것이 적을 수 있습니다. 체력과 시간을 아끼며 선택과 집중을 하세요.');
-    if (notes.peer) t.push(strong
-      ? '경쟁자가 많아지고 나가는 돈이 늘 수 있습니다. 보증, 동업, 큰 투자는 신중하게 결정하세요.'
-      : '주변 사람의 도움으로 기회가 생깁니다. 함께하는 일에서 수익이 나기 쉽습니다.');
-    if (notes.resource) t.push(strong
-      ? '돈보다 공부와 준비에 마음이 가는 해입니다. 지출을 줄이고 자기계발에 투자하면 다음 해에 결실을 봅니다.'
-      : '든든한 지원군이 생기는 해입니다. 자격증, 문서, 계약과 관련된 일에서 이득을 볼 수 있습니다.');
-    if (notes.officer) t.push(strong
-      ? '책임과 자리가 커지면서 수입도 안정됩니다. 직장 안에서 인정받기 좋은 해입니다.'
-      : '일의 압박이 커질 수 있습니다. 무리한 확장보다 지금 가진 것을 지키는 데 집중하세요.');
-
-    var tail = ['', '큰돈이 오가는 결정은 한 번 더 점검하세요.', '지출 관리를 꼼꼼히 하면 무난히 지나갑니다.', '흐름이 좋으니 계획한 일을 적극적으로 추진해 보세요.', '재물 흐름이 아주 좋은 해입니다. 들어온 돈을 잘 모아 두세요.'];
-    if (score === 1) t.push('올해는 돈을 불리기보다 지키는 것이 우선입니다.');
-    else t.push(tail[score - 1]);
-    return { score: score, text: t.filter(Boolean).join(' ') };
+    if (seen.wealth && chart.elements[wealthEl] === 0) score += 0.5;
+    return { score: clamp(score), notes: notes };
   }
 
+  var HEALTH_TEXT = {
+    fill: { now: '부족했던 기운이 채워져 몸과 마음의 균형이 좋아지는 해입니다.', past: '부족했던 기운이 채워져 컨디션이 좋았던 해예요.' },
+    over: { now: '이미 강한 {el} 기운이 더 세지는 해라 한쪽으로 무리가 가기 쉽습니다.', past: '이미 강한 {el} 기운이 더 세져서 몸 한쪽에 무리가 갔을 수 있어요.' },
+    pressure: { now: '일과 책임의 압박이 커져 스트레스가 쌓일 수 있습니다.', past: '일과 책임의 압박으로 스트레스가 많았던 해예요.' },
+    drain: { now: '에너지를 많이 쓰는 해라 쉬는 시간을 일부러 챙겨야 합니다.', past: '에너지를 많이 써서 쉽게 지쳤을 수 있어요.' },
+    clash: { now: '생활 환경에 변화가 생기기 쉬워 컨디션이 흔들릴 수 있으니 이동할 때 안전에 유의하세요.', past: '이사, 이직처럼 생활 환경이 바뀌면서 컨디션이 흔들렸을 수 있어요.' },
+    good: { now: '전반적으로 활력이 좋은 해입니다.', past: '전반적으로 활력이 좋았던 해예요.' },
+    plain: { now: '큰 무리는 없지만 기본 관리가 중요한 해입니다.', past: '건강은 큰 탈 없이 지나간 해예요.' }
+  };
+
   var HEALTH_TIP = {
-    wood: '목·어깨 근육이 쉽게 뭉치고 눈이 피로해질 수 있습니다. 틈틈이 스트레칭하고 화면 보는 시간을 줄이세요.',
-    fire: '마음이 들뜨고 잠이 얕아지기 쉽습니다. 카페인을 줄이고 일정한 시간에 잠자리에 드세요.',
-    earth: '식사 시간이 불규칙해지면 속이 더부룩해지기 쉽습니다. 과식을 피하고 규칙적으로 드세요.',
-    metal: '건조한 환경에 약해질 수 있습니다. 실내 습도와 보습에 신경 쓰고 가벼운 유산소 운동으로 호흡을 틔우세요.',
-    water: '몸이 차가워지고 쉽게 지칠 수 있습니다. 물을 충분히 마시고 하체를 따뜻하게 하며 과로를 피하세요.'
+    wood: { now: '목·어깨 근육이 쉽게 뭉치고 눈이 피로해질 수 있습니다. 틈틈이 스트레칭하고 화면 보는 시간을 줄이세요.', past: '이 무렵 목·어깨 결림이나 눈 피로를 자주 느꼈을 수 있어요.' },
+    fire: { now: '마음이 들뜨고 잠이 얕아지기 쉽습니다. 카페인을 줄이고 일정한 시간에 잠자리에 드세요.', past: '이 무렵 잠을 설치거나 마음이 들떠 쉽게 예민해졌을 수 있어요.' },
+    earth: { now: '식사 시간이 불규칙해지면 속이 더부룩해지기 쉽습니다. 과식을 피하고 규칙적으로 드세요.', past: '이 무렵 식사가 불규칙하거나 속이 불편한 날이 많았을 수 있어요.' },
+    metal: { now: '건조한 환경에 약해질 수 있습니다. 실내 습도와 보습에 신경 쓰고 가벼운 유산소 운동으로 호흡을 틔우세요.', past: '이 무렵 피부나 호흡기가 건조함에 예민했을 수 있어요.' },
+    water: { now: '몸이 차가워지고 쉽게 지칠 수 있습니다. 물을 충분히 마시고 하체를 따뜻하게 하며 과로를 피하세요.', past: '이 무렵 몸이 차고 쉽게 지쳤을 수 있어요.' }
   };
 
   function healthFortune(chart, yr, strong) {
     var score = 4, focus = null, notes = [];
+    function note(k) { if (notes.indexOf(k) < 0) notes.push(k); }
     [yr.stemElement, yr.branchElement].forEach(function (e) {
       var r = relation(chart.dayMaster, e);
-      if (chart.elements[e] >= 3) { score -= 1; focus = focus || e; notes.push('over'); }
-      else if (chart.elements[e] === 0) { score += 0.5; notes.push('fill'); }
-      if (!strong && r === 'officer') { score -= 0.5; notes.push('pressure'); }
-      if (!strong && r === 'output') { score -= 0.5; notes.push('drain'); }
+      if (chart.elements[e] >= 3) { score -= 1; focus = focus || e; note('over'); }
+      else if (chart.elements[e] === 0) { score += 0.5; note('fill'); }
+      if (!strong && r === 'officer') { score -= 0.5; note('pressure'); }
+      if (!strong && r === 'output') { score -= 0.5; note('drain'); }
       if (!strong && r === 'resource') score += 0.5;
     });
-    var clash = pairIn(CLASH, yr.branch, chart.dayBranch);
-    if (clash) { score -= 0.5; notes.push('clash'); }
+    if (pairIn(CLASH, yr.branch, chart.dayBranch)) { score -= 0.5; note('clash'); }
     score = clamp(score);
 
     if (!focus) {
       var controlled = CYCLE[(CYCLE.indexOf(yr.stemElement) + 2) % 5];
       focus = chart.elements[controlled] <= 1 ? controlled : chart.dayMaster;
     }
-
-    var t = [];
-    if (notes.indexOf('fill') >= 0) t.push('부족했던 기운이 채워져 몸과 마음의 균형이 좋아지는 해입니다.');
-    if (notes.indexOf('over') >= 0) t.push('이미 강한 ' + EL[focus].label + ' 기운이 더 세지는 해라 한쪽으로 무리가 가기 쉽습니다.');
-    if (notes.indexOf('pressure') >= 0) t.push('일과 책임의 압박이 커져 스트레스가 쌓일 수 있습니다.');
-    if (notes.indexOf('drain') >= 0) t.push('에너지를 많이 쓰는 해라 쉬는 시간을 일부러 챙겨야 합니다.');
-    if (notes.indexOf('clash') >= 0) t.push('생활 환경에 변화가 생기기 쉬워 컨디션이 흔들릴 수 있으니 이동할 때 안전에 유의하세요.');
-    if (!t.length) t.push(score >= 4 ? '전반적으로 활력이 좋은 해입니다.' : '큰 무리는 없지만 기본 관리가 중요한 해입니다.');
-    t.push(HEALTH_TIP[focus]);
-    return { score: score, focus: focus, text: t.join(' ') };
+    if (!notes.length) notes.push(score >= 4 ? 'good' : 'plain');
+    return { score: score, focus: focus, notes: notes };
   }
+
+  var LOVE_TEXT = {
+    hit: { now: '이성과의 인연을 부르는 기운이 들어오는 해입니다. 새로운 만남의 기회가 자주 찾아옵니다.', past: '이성과의 인연이 들어온 해였어요. 새로운 사람을 만나거나 고백을 주고받았을 수 있어요.' },
+    combine: { now: '마음이 잘 맞는 사람과 관계가 깊어지기 좋아 연인이라면 다음 단계를 생각해 볼 만합니다.', past: '누군가와 마음이 깊어졌던 해예요. 연애를 시작했거나 관계가 한 단계 진전됐을 수 있어요.' },
+    charm: { now: '매력이 돋보여 주변의 관심을 받기 쉽습니다.', past: '매력이 돋보여 주변의 관심을 많이 받았던 해예요.' },
+    rival: { now: '좋아하는 사람을 두고 경쟁하거나, 친구 관계가 연애에 영향을 줄 수 있습니다.', past: '연애에 경쟁자가 있었거나, 친구 관계가 연애에 영향을 줬을 수 있어요.' },
+    clash: { now: '관계에 변화가 생기기 쉬운 해입니다. 오해가 생기면 미루지 말고 바로 대화로 푸세요.', past: '관계에 변화가 컸던 해예요. 이별이나 다툼, 혹은 관계를 새로 정리한 일이 있었을 수 있어요.' },
+    calm: { now: '연애운이 크게 출렁이지 않는 잔잔한 해입니다. 지금의 관계를 차분히 다지기 좋습니다.', past: '연애는 큰 변화 없이 잔잔하게 흘러간 해예요.' },
+    go: { now: '마음이 가는 사람이 있다면 먼저 다가가 보세요.', past: '' },
+    slow: { now: '조급하게 결정하기보다 상대를 천천히 알아 가는 것이 좋습니다.', past: '' }
+  };
 
   function loveFortune(chart, yr, gender) {
     var targets = gender === 'male' ? ['wealth'] : gender === 'female' ? ['officer'] : ['wealth', 'officer'];
@@ -235,34 +274,111 @@
     if (charm) score += 0.5;
     score = clamp(score);
 
-    var t = [];
-    if (hit) t.push('이성과의 인연을 부르는 기운이 들어오는 해입니다. 새로운 만남의 기회가 자주 찾아옵니다.');
-    if (combine) t.push('마음이 잘 맞는 사람과 관계가 깊어지기 좋아 연인이라면 다음 단계를 생각해 볼 만합니다.');
-    if (charm) t.push('매력이 돋보여 주변의 관심을 받기 쉽습니다.');
-    if (rival) t.push('좋아하는 사람을 두고 경쟁하거나, 친구 관계가 연애에 영향을 줄 수 있습니다.');
-    if (clash) t.push('관계에 변화가 생기기 쉬운 해입니다. 오해가 생기면 미루지 말고 바로 대화로 푸세요.');
-    if (!t.length) t.push('연애운이 크게 출렁이지 않는 잔잔한 해입니다. 지금의 관계를 차분히 다지기 좋습니다.');
-    if (score >= 4 && !combine) t.push('마음이 가는 사람이 있다면 먼저 다가가 보세요.');
-    if (score <= 2) t.push('조급하게 결정하기보다 상대를 천천히 알아 가는 것이 좋습니다.');
-    return { score: score, text: t.join(' ') };
+    var notes = [];
+    if (hit) notes.push('hit');
+    if (combine) notes.push('combine');
+    if (charm) notes.push('charm');
+    if (rival) notes.push('rival');
+    if (clash) notes.push('clash');
+    if (!notes.length) notes.push('calm');
+    if (score >= 4 && !combine) notes.push('go');
+    if (score <= 2) notes.push('slow');
+    return { score: score, notes: notes };
+  }
+
+  function wealthText(f, tense) {
+    var t = f.notes.map(function (k) { return WEALTH_TEXT[k][tense]; });
+    t.push(WEALTH_TAIL[tense][f.score - 1]);
+    return t.join(' ');
+  }
+
+  function healthText(f, tense) {
+    var t = f.notes.map(function (k) { return HEALTH_TEXT[k][tense].replace('{el}', EL[f.focus].label); });
+    // 지난 해는 컨디션이 좋았던 해에 굳이 불편했던 부위를 덧붙이지 않는다
+    if (tense === 'now' || f.score <= 3) t.push(HEALTH_TIP[f.focus][tense]);
+    return t.join(' ');
+  }
+
+  function loveText(f, tense) {
+    return f.notes.map(function (k) { return LOVE_TEXT[k][tense]; }).filter(Boolean).join(' ');
+  }
+
+  // 근거의 방향: 좋은 일(+1) / 힘든 일(-1)
+  var POLARITY = {
+    wealth: { 'wealth+': 1, 'output+': 1, 'peer-': 1, 'resource-': 1, 'officer+': 1, 'wealth-': -1, 'output-': -1, 'peer+': -1, 'resource+': -1, 'officer-': -1 },
+    health: { fill: 1, good: 1, over: -1, pressure: -1, drain: -1, clash: -1 },
+    love: { hit: 1, combine: 1, charm: 1, rival: -1, clash: -1 }
+  };
+  var PAST_TEXT = {
+    wealth: function (k) { return WEALTH_TEXT[k].past; },
+    health: function (k, f) { return HEALTH_TEXT[k].past.replace('{el}', EL[f.focus].label); },
+    love: function (k) { return LOVE_TEXT[k].past; }
+  };
+
+  // 한 줄 요약: 평균(3점)에서 가장 멀리 떨어진 영역에서, 점수 방향과 맞는 근거를 고른다
+  function highlight(w, h, l) {
+    var list = [{ key: 'wealth', f: w }, { key: 'health', f: h }, { key: 'love', f: l }];
+    list.sort(function (a, b) { return Math.abs(b.f.score - 3) - Math.abs(a.f.score - 3); });
+    var top = list[0];
+    var dir = top.f.score > 3 ? 1 : top.f.score < 3 ? -1 : 0;
+    var pick = top.f.notes.filter(function (k) { return dir === 0 || POLARITY[top.key][k] === dir; })[0];
+    var text = pick ? PAST_TEXT[top.key](pick, top.f) : top.key === 'wealth' ? WEALTH_TAIL.past[top.f.score - 1] : PAST_TEXT[top.key](top.f.notes[0], top.f);
+    return { key: top.key, good: dir, text: text };
+  }
+
+  function fortuneYear(chart, y, strong, gender, tense) {
+    var yr = Saju.yearGanZhi(y);
+    var w = wealthFortune(chart, yr, strong);
+    var h = healthFortune(chart, yr, strong);
+    var l = loveFortune(chart, yr, gender);
+    var out = {
+      year: y,
+      title: EL[yr.stemElement].color + ' ' + ANIMAL[yr.branch] + '의 해',
+      elements: [yr.stemElement, yr.branchElement],
+      wealth: { score: w.score, text: wealthText(w, tense) },
+      health: { score: h.score, focus: h.focus, text: healthText(h, tense) },
+      love: { score: l.score, text: loveText(l, tense) }
+    };
+    if (tense === 'past') out.highlight = highlight(w, h, l);
+    return out;
   }
 
   function yearly(chart, fromYear, count, gender) {
     var strong = strength(chart) >= 0.5;
     var out = [];
-    for (var y = fromYear; y < fromYear + count; y++) {
-      var yr = Saju.yearGanZhi(y);
-      out.push({
-        year: y,
-        title: EL[yr.stemElement].color + ' ' + ANIMAL[yr.branch] + '의 해',
-        elements: [yr.stemElement, yr.branchElement],
-        wealth: wealthFortune(chart, yr, strong),
-        health: healthFortune(chart, yr, strong),
-        love: loveFortune(chart, yr, gender)
-      });
+    for (var y = fromYear; y < fromYear + count; y++) out.push(fortuneYear(chart, y, strong, gender, 'now'));
+    return out;
+  }
+
+  // 지난 해 돌아보기: 최근 연도부터 거꾸로, 만 minAge세 이후만
+  function past(chart, currentYear, count, gender, birthYear, minAge) {
+    var strong = strength(chart) >= 0.5;
+    var from = Math.max(currentYear - count, birthYear + minAge);
+    var out = [];
+    for (var y = currentYear - 1; y >= from; y--) {
+      var f = fortuneYear(chart, y, strong, gender, 'past');
+      f.age = y - birthYear;
+      out.push(f);
     }
     return out;
   }
 
-  return { EL: EL, CYCLE: CYCLE, personality: personality, yearly: yearly, strength: strength };
+  // 영역별 가장 좋았던 해(4점 이상)와 힘들었던 해(2점 이하)
+  function pastSummary(list) {
+    var res = {};
+    ['wealth', 'health', 'love'].forEach(function (k) {
+      var best = null, worst = null;
+      list.forEach(function (y) {
+        if (!best || y[k].score > best[k].score) best = y;
+        if (!worst || y[k].score < worst[k].score) worst = y;
+      });
+      res[k] = {
+        best: best && best[k].score >= 4 ? best.year : null,
+        worst: worst && worst[k].score <= 2 ? worst.year : null
+      };
+    });
+    return res;
+  }
+
+  return { EL: EL, CYCLE: CYCLE, personality: personality, yearly: yearly, past: past, pastSummary: pastSummary, strength: strength };
 });
